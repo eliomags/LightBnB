@@ -110,9 +110,31 @@ exports.addUser = addUser;
  * @param {string} guest_id The id of the user.
  * @return {Promise<[{}]>} A promise to the reservations.
  */
+//initial version replaced later
+// const getAllReservations = function(guest_id, limit = 10) {
+//   return getAllProperties(null, 2);
+// }
+
 const getAllReservations = function(guest_id, limit = 10) {
-  return getAllProperties(null, 2);
-}
+  const query = {
+    //SQL query that joins multiple tables to get the required data
+    text: `SELECT reservations.*, properties.*, avg(rating) as average_rating
+           FROM reservations
+           JOIN properties ON reservations.property_id = properties.id
+           JOIN property_reviews ON properties.id = property_reviews.property_id
+           WHERE reservations.guest_id = $1 AND end_date < now()::date
+           GROUP BY reservations.id, properties.id
+           ORDER BY reservations.start_date DESC
+           LIMIT $2;`,
+    values: [guest_id, limit]
+  };
+
+  return pool
+    .query(query)
+    .then(res => res.rows)
+    .catch(err => console.error('Error executing query', err.stack));
+};
+
 exports.getAllReservations = getAllReservations;
 
 /// Properties
