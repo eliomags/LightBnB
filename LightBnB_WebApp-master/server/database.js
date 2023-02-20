@@ -225,12 +225,24 @@ const getAllProperties = function (options, limit = 10) {
   if (options.minimum_rating) {
     queryParams.push(options.minimum_rating);
     if (whereClauseAdded) {
-      queryString += `AND AVG(property_reviews.rating) >= $${queryParams.length} `;
+      queryString += `AND properties.id IN (
+        SELECT property_reviews.property_id 
+        FROM property_reviews 
+        GROUP BY property_reviews.property_id
+        HAVING AVG(property_reviews.rating) >= $${queryParams.length}
+      ) `;
     } else {
-      queryString += `WHERE AVG(property_reviews.rating) >= $${queryParams.length} `;
+      queryString += `WHERE properties.id IN (
+        SELECT property_reviews.property_id 
+        FROM property_reviews 
+        GROUP BY property_reviews.property_id
+        HAVING AVG(property_reviews.rating) >= $${queryParams.length}
+      ) `;
       whereClauseAdded = true;
     }
   }
+
+
 
   // 4
   queryParams.push(limit);
@@ -262,7 +274,8 @@ exports.getAllProperties = getAllProperties;
 // }
 
 const addProperty = function (property) {
-  const values = [property.owner_id, property.title, property.description, property.thumbnail_photo_url, property.cover_photo_url, property.cost_per_night, property.parking_spaces, property.number_of_bathrooms, property.number_of_bedrooms, property.country, property.street, property.city, property.province, property.post_code];
+  const costPerNightInCents = property.cost_per_night * 100; // Convert to cents
+  const values = [property.owner_id, property.title, property.description, property.thumbnail_photo_url, property.cover_photo_url, costPerNightInCents, property.parking_spaces, property.number_of_bathrooms, property.number_of_bedrooms, property.country, property.street, property.city, property.province, property.post_code];
   const queryString = `
     INSERT INTO properties (owner_id, title, description, thumbnail_photo_url, cover_photo_url, cost_per_night, parking_spaces, number_of_bathrooms, number_of_bedrooms, country, street, city, province, post_code)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
